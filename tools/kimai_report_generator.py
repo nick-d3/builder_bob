@@ -405,8 +405,10 @@ def generate_daily_report(date_str):
     else:
         report += "✅ No active timers - everyone is clocked out.\n"
     
-    # Save report
-    report_file = REPORTS_DIR / f"kimai_daily_report_{date_str}.md"
+    # Save report in date-organized folder
+    date_dir = REPORTS_DIR / date_str
+    date_dir.mkdir(parents=True, exist_ok=True)
+    report_file = date_dir / f"kimai_daily_report_{date_str}.md"
     report_file.write_text(report)
     print(f"✅ Daily report saved to: {report_file}")
     
@@ -495,8 +497,10 @@ def generate_weekly_report(monday_date):
             report += f"- **{r['name']}** (User {r['user_id']}): {r['total_hours']} hours\n"
         report += "\n"
     
-    # Save report
-    report_file = REPORTS_DIR / f"kimai_weekly_report_{monday_date}.md"
+    # Save report in date-organized folder
+    date_dir = REPORTS_DIR / monday_date
+    date_dir.mkdir(parents=True, exist_ok=True)
+    report_file = date_dir / f"kimai_weekly_report_{monday_date}.md"
     report_file.write_text(report)
     print(f"✅ Weekly report saved to: {report_file}")
     

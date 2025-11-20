@@ -1,34 +1,62 @@
-# Workflow Directory
+# Morning Playbook - D'amico Construction
 
-This directory contains workflow instructions for automating common tasks.
+**Support Agent Instructions:** Every morning, when you read this README, you must immediately run both daily workflows to generate the morning reports for Nick D'Amico.
+
+## Daily Morning Workflow
+
+Upon reading this README, execute the following workflows in order:
+
+### 1. Kimai Daily Report
+**Workflow File:** `workflows/kimai_daily_weekly_report_instructions.md`
+
+Follow the instructions to generate the daily timesheet report:
+- Query Kimai API for today's timesheet data
+- Analyze hours worked, clock-in/out status
+- Detect suspicious activity (over 13 hours, not clocked out, stale timers)
+- Generate markdown report
+
+**Output:** `reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md`
+
+### 2. Email Analysis Report
+**Workflow File:** `workflows/email_analysis_instructions.md`
+
+Follow the instructions to analyze and prioritize emails:
+- Search for emails from the last 24 hours
+- Retrieve full email content
+- Analyze and categorize emails
+- Generate prioritized markdown report
+
+**Output:** `reports/YYYY-MM-DD/email_report.md`
+
+**Important:** Both reports should be saved in the same date folder (e.g., `reports/2025-11-18/`) so everything from the same day is bundled together.
+
+---
 
 ## Available Workflows
 
 ### Email Analysis Workflow
-**File:** `workflow/email_analysis_instructions.md`
+**File:** `workflows/email_analysis_instructions.md`
 
 This workflow provides step-by-step instructions for:
 - Searching and retrieving emails from Gmail
 - Analyzing email content and extracting key information
 - Generating a comprehensive markdown report with prioritized action items
 
-**Usage:** When asked to check emails or create an email report, follow the instructions in `workflow/email_analysis_instructions.md` to automatically:
-1. Search for recent emails
-2. Retrieve full email content
-3. Analyze and categorize emails
-4. Generate a detailed markdown report with all necessary information
-
-**Output:** Creates `reports/email_report.md` with:
+**Output:** Creates `reports/YYYY-MM-DD/email_report.md` with:
 - Executive summary
-- Detailed email breakdown
+- Detailed email breakdown (ordered by priority: High → Medium → Low, newest first)
 - Priority action items
 - Important dates calendar
 - Contact directory
 - Project summaries
 - Recommended next steps
 
+**Priority Rules:**
+- ALL surveys must be marked as at least Medium priority
+- Construction/vendor emails must NEVER be marked as Low priority (minimum Medium)
+
 ### Kimai Daily & Weekly Report Workflow
-**File:** `workflow/kimai_daily_weekly_report_instructions.md`
+**File:** `workflows/kimai_daily_weekly_report_instructions.md`
 
 This workflow provides step-by-step instructions for:
 - Analyzing Kimai timesheet data for daily and weekly reports
@@ -36,20 +64,14 @@ This workflow provides step-by-step instructions for:
 - Monitoring active timers and stale entries
 - Generating comprehensive markdown reports with alerts
 
-**Usage:** When asked to generate timesheet reports or check for suspicious activity, follow the instructions in `workflow/kimai_daily_weekly_report_instructions.md` to automatically:
-1. Query Kimai API for timesheet data (using `?user=all` parameter)
-2. Analyze hours worked, clock-in/out status
-3. Detect suspicious patterns (over 13 hours, unclosed entries, stale timers)
-4. Generate detailed markdown reports with alerts
-
-**Daily Report Output:** Creates `reports/kimai_daily_report_YYYY-MM-DD.md` with:
+**Daily Report Output:** Creates `reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md` with:
 - Executive summary (employees worked, total hours, suspicious activities)
 - Daily work summary table (all employees with hours and status)
 - Suspicious activity alerts (over 13 hours, not clocked out, stale timers)
 - Active timers list (currently clocked in employees)
 - Detailed breakdown per employee
 
-**Weekly Report Output:** Creates `reports/kimai_weekly_report_YYYY-MM-DD.md` with:
+**Weekly Report Output:** Creates `reports/YYYY-MM-DD/kimai_weekly_report_YYYY-MM-DD.md` with:
 - Executive summary (week range, total hours, averages)
 - Weekly summary by employee (total hours, days worked, averages)
 - Suspicious activity alerts (excessive hours, multiple long days, unclosed entries)
@@ -64,3 +86,11 @@ This workflow provides step-by-step instructions for:
 
 **Note:** The workflow uses the Kimai API directly (bypassing MCP server bug) to ensure `?user=all` parameter is properly passed.
 
+## Tools
+
+**File:** `tools/kimai_report_generator.py`
+
+Python script for generating Kimai reports:
+- Daily reports: `python3 tools/kimai_report_generator.py --daily`
+- Weekly reports: `python3 tools/kimai_report_generator.py --weekly`
+- Both: `python3 tools/kimai_report_generator.py --both`

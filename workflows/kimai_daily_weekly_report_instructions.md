@@ -103,9 +103,11 @@ Create a markdown report with the following sections:
      - Description (if any)
 
 ### 8. Save Daily Report
-Save the report as:
+Save the report in the date-organized folder:
 ```
-/Users/ndamico/agents/reports/kimai_daily_report_YYYY-MM-DD.md
+DATE=$(date +%F)  # or whichever date the report covers
+mkdir -p /Users/ndamico/agents/reports/${DATE}
+/Users/ndamico/agents/reports/${DATE}/kimai_daily_report_${DATE}.md
 ```
 
 ---
@@ -185,9 +187,11 @@ Create a markdown report with:
    - Highlight days with > 13 hours
 
 ### 6. Save Weekly Report
-Save the report as:
+Save the report in the date-organized folder (using Monday's date):
 ```
-/Users/ndamico/agents/reports/kimai_weekly_report_YYYY-MM-DD.md
+MONDAY_DATE=$(date -v-mon +%F 2>/dev/null || date -d "last monday" +%F)  # Monday's date
+mkdir -p /Users/ndamico/agents/reports/${MONDAY_DATE}
+/Users/ndamico/agents/reports/${MONDAY_DATE}/kimai_weekly_report_${MONDAY_DATE}.md
 ```
 (Use Monday's date for the filename)
 

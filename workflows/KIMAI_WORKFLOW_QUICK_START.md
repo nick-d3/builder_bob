@@ -44,8 +44,9 @@ python3 /Users/ndamico/agents/workflow/kimai_report_generator.py --weekly --week
 
 ## Report Locations
 
-- **Daily Reports:** `/Users/ndamico/agents/reports/kimai_daily_report_YYYY-MM-DD.md`
-- **Weekly Reports:** `/Users/ndamico/agents/reports/kimai_weekly_report_YYYY-MM-DD.md`
+Reports are saved in date-organized folders:
+- **Daily Reports:** `/Users/ndamico/agents/reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md`
+- **Weekly Reports:** `/Users/ndamico/agents/reports/YYYY-MM-DD/kimai_weekly_report_YYYY-MM-DD.md` (using Monday's date)
 
 ## Automation
 
