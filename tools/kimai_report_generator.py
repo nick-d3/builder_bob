@@ -22,7 +22,7 @@ from pathlib import Path
 # Configuration
 KIMAI_URL = "https://tracking.damico.construction"
 KIMAI_TOKEN = "5f3d0820c5af4456937441752"  # Admin token with view_other_timesheet permission
-REPORTS_DIR = Path("/Users/ndamico/agents/reports")
+REPORTS_DIR = Path("/Users/ndamico/Agent/builder/reports")
 
 # User ID to name mapping (can be fetched dynamically)
 USER_MAP = {
@@ -81,6 +81,19 @@ def get_timesheets(begin, end, active=False):
         return []
 
 
+def format_time(time_str):
+    """Format ISO datetime string to 12-hour time with AM/PM"""
+    if not time_str:
+        return None
+    try:
+        # Handle various timezone formats
+        time_str_clean = time_str.replace('Z', '+00:00').replace('-0500', '-05:00').replace('-0400', '-04:00')
+        dt = datetime.fromisoformat(time_str_clean)
+        return dt.strftime('%I:%M %p').lstrip('0')  # Remove leading zero from hour, e.g., "06:30 AM" -> "6:30 AM"
+    except:
+        return time_str[:5] if len(time_str) >= 5 else time_str
+
+
 def analyze_daily(timesheets, user_map):
     """Analyze daily timesheet data - includes all employees even if they didn't clock in"""
     by_user = defaultdict(list)
@@ -102,6 +115,21 @@ def analyze_daily(timesheets, user_map):
         total_hours = round(total_seconds / 3600, 2)
         
         unclosed = [e for e in entries if e.get('end') is None]
+        
+        # Extract clock-in/out times
+        clock_times = []
+        for e in sorted(entries, key=lambda x: x.get('begin', '')):
+            begin_time = format_time(e.get('begin'))
+            end_time = format_time(e.get('end'))
+            clock_times.append({
+                'clock_in': begin_time,
+                'clock_out': end_time,
+                'duration': round(e.get('duration', 0) / 3600, 2) if e.get('duration') else None
+            })
+        
+        # Get first clock-in and last clock-out
+        first_clock_in = format_time(min((e.get('begin') for e in entries if e.get('begin')), default=None))
+        last_clock_out = format_time(max((e.get('end') for e in entries if e.get('end')), default=None))
         
         # Check for very long single entry
         for e in entries:
@@ -144,7 +172,10 @@ def analyze_daily(timesheets, user_map):
             'hours': total_hours,
             'unclosed': len(unclosed),
             'over_13h': total_hours > 13,
-            'entries_detail': entries
+            'entries_detail': entries,
+            'first_clock_in': first_clock_in,
+            'last_clock_out': last_clock_out,
+            'clock_times': clock_times
         })
     
     # Add employees who didn't clock in (0 hours)
@@ -157,7 +188,10 @@ def analyze_daily(timesheets, user_map):
                 'hours': 0.0,
                 'unclosed': 0,
                 'over_13h': False,
-                'entries_detail': []
+                'entries_detail': [],
+                'first_clock_in': None,
+                'last_clock_out': None,
+                'clock_times': []
             })
     
     # Sort: employees with hours first (descending), then employees with 0 hours (by user ID)
@@ -341,8 +375,8 @@ def generate_daily_report(date_str):
 
 ## Daily Work Summary
 
-| User ID | Name | Entries | Hours | Status |
-|---------|------|---------|-------|--------|
+| User ID | Name | Entries | Hours | Clock In | Clock Out | Status |
+|---------|------|---------|-------|----------|-----------|--------|
 """
     
     for r in results:
@@ -352,9 +386,37 @@ def generate_daily_report(date_str):
         if r['over_13h']:
             status.append("🔴 OVER 13 HOURS")
         status_str = " | ".join(status) if status else ("✅ OK" if r['hours'] > 0 else "⚪ No Entry")
-        report += f"| {r['user_id']} | {r['name']} | {r['entries']} | {r['hours']}h | {status_str} |\n"
+        
+        # Format clock in/out times
+        clock_in_str = r.get('first_clock_in', '—') or '—'
+        clock_out_str = r.get('last_clock_out', '—') or '—'
+        if r['unclosed'] > 0:
+            clock_out_str = '⏱️ Still In'
+        
+        report += f"| {r['user_id']} | {r['name']} | {r['entries']} | {r['hours']}h | {clock_in_str} | {clock_out_str} | {status_str} |\n"
     
-    report += "\n---\n\n## 🔴 Critical Issues\n\n"
+    report += "\n---\n\n## Detailed Clock-In/Out Times\n\n"
+    
+    # Add detailed breakdown for employees who worked
+    employees_worked = [r for r in results if r['hours'] > 0]
+    if employees_worked:
+        for r in employees_worked:
+            report += f"### {r['name']} (User {r['user_id']})\n\n"
+            if r.get('clock_times'):
+                report += "| Entry | Clock In | Clock Out | Hours |\n"
+                report += "|-------|----------|-----------|-------|\n"
+                for idx, ct in enumerate(r['clock_times'], 1):
+                    clock_in = ct['clock_in'] or '—'
+                    clock_out = ct['clock_out'] or '⏱️ Still In'
+                    hours = f"{ct['duration']}h" if ct['duration'] is not None else '—'
+                    report += f"| {idx} | {clock_in} | {clock_out} | {hours} |\n"
+                report += f"\n**Total:** {r['hours']} hours\n\n"
+            else:
+                report += "No clock-in/out data available.\n\n"
+    else:
+        report += "No employees clocked in today.\n\n"
+    
+    report += "---\n\n## 🔴 Critical Issues\n\n"
     
     if suspicious['not_clocked_out']:
         report += "### Employees Who Did Not Clock Out\n\n"

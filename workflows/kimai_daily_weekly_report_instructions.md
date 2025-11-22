@@ -16,184 +16,106 @@ This workflow automates the process of analyzing Kimai timesheet data to generat
 
 ## Steps to Execute - Daily Report
 
-### 1. Get Yesterday's Date
-Calculate yesterday's date in YYYY-MM-DD format:
-```python
-from datetime import datetime, timedelta
-yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-begin = f"{yesterday}T00:00:00"
-end = f"{yesterday}T23:59:59"
-```
+### 1. Use the Custom Python Tool
+**IMPORTANT:** Use the custom Python script `tools/kimai_report_generator.py` to generate the daily report. This tool handles all API calls, data analysis, and report generation automatically.
 
-### 2. Query Yesterday's Timesheets
-Use the Kimai API directly (bypassing MCP bug):
+Run the following command:
 ```bash
-curl -s -H "Authorization: Bearer <TOKEN>" \
-  -H "Accept: application/json" \
-  "https://tracking.damico.construction/api/timesheets?user=all&begin=${BEGIN}&end=${END}&size=200"
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --daily
 ```
 
-**Note:** The MCP server has a bug where `user_scope: "all"` doesn't pass `?user=all`. Use the API directly or ensure the MCP server is fixed.
+This will:
+- Automatically calculate yesterday's date
+- Query all employees' timesheets using the API with `?user=all` parameter
+- Check for active timers and stale timers (> 24 hours)
+- Analyze data for suspicious activity (over 13 hours, not clocked out, etc.)
+- Generate a comprehensive markdown report
+- Save the report to `reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md`
 
-### 3. Query Active Timers
-Check for employees currently clocked in:
-```bash
-curl -s -H "Authorization: Bearer <TOKEN>" \
-  -H "Accept: application/json" \
-  "https://tracking.damico.construction/api/timesheets?user=all&active=1"
-```
+### 2. Report Structure
+The generated report includes:
 
-### 4. Get User Information
-Map user IDs to names:
-```bash
-curl -s -H "Authorization: Bearer <TOKEN>" \
-  -H "Accept: application/json" \
-  "https://tracking.damico.construction/api/users"
-```
-
-### 5. Analyze Daily Data
-For each employee who worked yesterday, calculate:
-- **Total Hours:** Sum of all timesheet durations for the day
-- **Number of Entries:** Count of timesheet entries
-- **Clock-Out Status:** Check if any entries have `end: null` (not clocked out)
-- **Hours Over 13:** Flag if total hours > 13
-- **Multiple Entries:** Note if employee has multiple clock-in/out cycles
-
-### 6. Detect Suspicious Activity
-Flag the following as suspicious:
-- **Over 13 Hours:** Total hours worked > 13 in a single day
-- **Not Clocked Out:** Any timesheet entry with `end: null`
-- **Stale Active Timers:** Active timers running for > 24 hours
-- **Very Short Entries:** Entries < 0.5 hours (may indicate errors)
-- **Very Long Single Entry:** Single entry > 14 hours (may indicate forgot to clock out)
-- **Multiple Long Entries:** Multiple entries totaling > 15 hours
-
-### 7. Generate Daily Report
-Create a markdown report with the following sections:
-
-#### Report Structure:
 1. **Executive Summary**
    - Date of report
-   - Total employees who worked
+   - Total employees (worked and not clocked in)
    - Total hours worked
    - Number of suspicious activities found
 
 2. **Daily Work Summary**
-   - Table of all employees who worked
+   - Table of all employees (including those who didn't clock in)
    - Columns: User ID, Name, Entries, Hours, Status
-   - Sort by hours (descending)
+   - Sorted by hours (descending), then employees with 0 hours
 
-3. **Suspicious Activity Alerts**
-   - **Over 13 Hours:** List employees who worked > 13 hours
-   - **Not Clocked Out:** List employees with unclosed entries
-   - **Stale Timers:** List active timers running > 24 hours
-   - **Other Anomalies:** Very short/long entries, etc.
+3. **Critical Issues**
+   - Employees who did not clock out
+   - Stale active timers (> 24 hours)
+   - Very long single entries (> 14 hours)
 
-4. **Active Timers**
+4. **Warnings**
+   - Employees who worked over 13 hours
+   - Very short entries (< 0.5 hours)
+
+5. **Active Timers**
    - List of employees currently clocked in
-   - Show start time and duration running
-   - Flag stale timers (> 24 hours)
+   - Shows start time and duration running
 
-5. **Detailed Breakdown**
-   - For each employee, show:
-     - Clock-in times
-     - Clock-out times
-     - Duration per entry
-     - Project/Activity worked on
-     - Description (if any)
+### 3. Alternative: Specific Date
+If you need to generate a report for a specific date (not yesterday), use:
+```bash
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --daily --date YYYY-MM-DD
+```
 
-### 8. Save Daily Report
-Save the report in the date-organized folder:
-```
-DATE=$(date +%F)  # or whichever date the report covers
-mkdir -p /Users/ndamico/agents/reports/${DATE}
-/Users/ndamico/agents/reports/${DATE}/kimai_daily_report_${DATE}.md
-```
+**Note:** The tool uses the Kimai API directly with the `?user=all` parameter to bypass MCP server limitations and ensure all employees' data is retrieved.
 
 ---
 
 ## Steps to Execute - Weekly Report
 
-### 1. Calculate Week Range
-Determine the week (Monday to Sunday):
-```python
-from datetime import datetime, timedelta
-today = datetime.now()
-# Get Monday of current week
-monday = today - timedelta(days=today.weekday())
-sunday = monday + timedelta(days=6)
-begin = f"{monday.strftime('%Y-%m-%d')}T00:00:00"
-end = f"{sunday.strftime('%Y-%m-%d')}T23:59:59"
-```
+### 1. Use the Custom Python Tool
+**IMPORTANT:** Use the custom Python script `tools/kimai_report_generator.py` to generate the weekly report. This tool handles all API calls, data analysis, and report generation automatically.
 
-### 2. Query Week's Timesheets
+Run the following command:
 ```bash
-curl -s -H "Authorization: Bearer <TOKEN>" \
-  -H "Accept: application/json" \
-  "https://tracking.damico.construction/api/timesheets?user=all&begin=${BEGIN}&end=${END}&size=500"
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --weekly
 ```
 
-### 3. Analyze Weekly Data
-For each employee, calculate:
-- **Total Hours:** Sum of all hours for the week
-- **Days Worked:** Count of unique days with timesheet entries
-- **Average Hours/Day:** Total hours / days worked
-- **Days with Over 13 Hours:** Count of days where employee worked > 13 hours
-- **Unclosed Entries:** Count of entries not clocked out during the week
-- **Projects Worked:** List of unique projects
-- **Activities:** List of unique activities
+This will:
+- Automatically calculate the previous week (Monday to Sunday)
+- Query all employees' timesheets for the week using the API with `?user=all` parameter
+- Analyze weekly data for suspicious activity (excessive hours, multiple long days, etc.)
+- Generate a comprehensive markdown report
+- Save the report to `reports/YYYY-MM-DD/kimai_weekly_report_YYYY-MM-DD.md` (using Monday's date)
 
-### 4. Detect Weekly Suspicious Activity
-Flag:
-- **Excessive Weekly Hours:** Total hours > 60 for the week
-- **Too Many Days Over 13 Hours:** 3+ days with > 13 hours
-- **Inconsistent Patterns:** Employee worked some days but not others (if expected to work full week)
-- **Multiple Unclosed Entries:** 2+ entries not clocked out during the week
-- **Very High Average:** Average hours/day > 12
+### 2. Report Structure
+The generated report includes:
 
-### 5. Generate Weekly Report
-Create a markdown report with:
-
-#### Report Structure:
 1. **Executive Summary**
    - Week range (Monday - Sunday)
-   - Total employees who worked
+   - Total employees (worked and not clocked in)
    - Total hours across all employees
    - Average hours per employee
    - Suspicious activities summary
 
 2. **Weekly Summary by Employee**
-   - Table with: User ID, Name, Total Hours, Days Worked, Avg Hours/Day, Status
-   - Sort by total hours (descending)
+   - Table with: User ID, Name, Total Hours, Days Worked, Avg Hours/Day, Days > 13h, Status
+   - Sorted by total hours (descending), then employees with 0 hours
 
-3. **Suspicious Activity Alerts**
-   - **Excessive Weekly Hours:** Employees with > 60 hours
-   - **Multiple Long Days:** Employees with 3+ days over 13 hours
-   - **Unclosed Entries:** Employees with multiple unclosed entries
-   - **Inconsistent Patterns:** Employees with unusual work patterns
+3. **Warnings**
+   - Excessive weekly hours (> 60 hours)
+   - Multiple days over 13 hours (3+ days)
+   - High average hours/day (> 12 hours)
 
 4. **Top Performers**
    - Employees with highest total hours
-   - Employees with most days worked
-   - Employees with highest average hours/day
 
-5. **Project Summary**
-   - Hours by project
-   - Employees per project
-   - Most active projects
-
-6. **Daily Breakdown**
-   - Summary table showing hours per day for each employee
-   - Highlight days with > 13 hours
-
-### 6. Save Weekly Report
-Save the report in the date-organized folder (using Monday's date):
+### 3. Alternative: Specific Week
+If you need to generate a report for a specific week, use:
+```bash
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --weekly --week YYYY-MM-DD
 ```
-MONDAY_DATE=$(date -v-mon +%F 2>/dev/null || date -d "last monday" +%F)  # Monday's date
-mkdir -p /Users/ndamico/agents/reports/${MONDAY_DATE}
-/Users/ndamico/agents/reports/${MONDAY_DATE}/kimai_weekly_report_${MONDAY_DATE}.md
-```
-(Use Monday's date for the filename)
+(Provide Monday's date for the week)
+
+**Note:** The tool uses the Kimai API directly with the `?user=all` parameter to bypass MCP server limitations and ensure all employees' data is retrieved.
 
 ---
 
@@ -260,12 +182,18 @@ Or fetch dynamically from `/api/users` endpoint.
 ### Daily Report
 - **Trigger:** Daily (can be scheduled via cron or automation)
 - **Time:** Run in morning to review previous day
-- **Output:** `kimai_daily_report_YYYY-MM-DD.md`
+- **Command:** `python3 /Users/ndamico/agents/tools/kimai_report_generator.py --daily`
+- **Output:** `reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md`
 
 ### Weekly Report
 - **Trigger:** Weekly (Monday morning for previous week)
 - **Time:** Run Monday morning to review previous week
-- **Output:** `kimai_weekly_report_YYYY-MM-DD.md` (Monday's date)
+- **Command:** `python3 /Users/ndamico/agents/tools/kimai_report_generator.py --weekly`
+- **Output:** `reports/YYYY-MM-DD/kimai_weekly_report_YYYY-MM-DD.md` (Monday's date)
+
+### Both Reports
+- **Command:** `python3 /Users/ndamico/agents/tools/kimai_report_generator.py --both`
+- Generates both daily and weekly reports in one run
 
 ---
 
@@ -280,40 +208,44 @@ When the user asks to:
 - "Review this week's hours"
 - "Check for suspicious activity"
 
-Execute this workflow to:
-1. Query Kimai API for timesheet data
+Execute this workflow by running:
+```bash
+# For daily report
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --daily
+
+# For weekly report
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --weekly
+
+# For both reports
+python3 /Users/ndamico/agents/tools/kimai_report_generator.py --both
+```
+
+The tool will:
+1. Query Kimai API for timesheet data (with `?user=all` parameter)
 2. Analyze hours, clock-in/out status
 3. Detect suspicious patterns
 4. Generate comprehensive markdown reports
 5. Highlight issues requiring attention
+6. Save reports to the appropriate date folder
 
 ---
 
 ## API Usage Notes
 
-### Critical: Use `?user=all` Parameter
-The Kimai API requires `?user=all` to see all employees' timesheets. Without it, only the token owner's timesheets are returned.
-
-**Correct:**
-```
-/api/timesheets?user=all&begin=2025-11-13T00:00:00&end=2025-11-13T23:59:59
-```
-
-**Incorrect (MCP bug):**
-```
-/api/timesheets?begin=2025-11-13T00:00:00&end=2025-11-13T23:59:59
-```
+### Tool Handles API Configuration
+The `kimai_report_generator.py` tool automatically handles all API configuration:
+- Uses `?user=all` parameter to see all employees' timesheets
+- Includes proper authentication headers
+- Handles rate limiting and pagination
+- Caches user information to avoid repeated API calls
 
 ### Required Permissions
-The API token must have:
+The API token configured in the tool must have:
 - `view_other_timesheet` - To see all employees' timesheets
 - `view_timesheet` - To see timesheet data
 - `view_user` - To see user information
 
-### Rate Limiting
-- Use reasonable `size` parameters (200-500 for daily/weekly)
-- Don't query unnecessarily large date ranges
-- Cache user information to avoid repeated API calls
+**Note:** The tool's token is configured in `tools/kimai_report_generator.py` and should not need modification unless the token expires.
 
 ---
 
@@ -381,10 +313,12 @@ The API token must have:
 ---
 
 ## Notes
-- Always use the API directly with `?user=all` until MCP server bug is fixed
-- Reports are saved to `/Users/ndamico/agents/reports/`
+- **Always use the custom Python tool** (`tools/kimai_report_generator.py`) instead of manual API calls
+- The tool handles all API interactions with `?user=all` parameter automatically
+- Reports are saved to `/Users/ndamico/agents/reports/YYYY-MM-DD/`
 - Date format: YYYY-MM-DD for filenames
-- Time format: ISO 8601 (YYYY-MM-DDTHH:MM:SS-0500) for API queries
+- Time format: ISO 8601 (YYYY-MM-DDTHH:MM:SS) for API queries
 - All times are in America/New_York timezone
 - Reports include both summary and detailed breakdowns for review
+- The tool includes all employees in reports (even those who didn't clock in) for complete visibility
 
