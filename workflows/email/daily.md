@@ -1,12 +1,29 @@
-# Email Analysis Workflow Instructions
+# Email Analysis Workflow
 
 ## Purpose
-This workflow automates the process of analyzing emails from the user's Gmail account and generating a comprehensive markdown report.
+Automates the process of analyzing emails from Nick D'Amico's Gmail account and generating a comprehensive markdown report with prioritized action items.
+
+## Frequency
+Daily (part of morning workflow)
+
+## Quick Reference for AI Agents
+
+**When to run:** After `just morning` completes (or as part of daily workflow)
+
+**Key Information:**
+- Email: `bdamico@damicoconstruction.net`
+- Time range: Last 24 hours
+- Output: `reports/YYYY-MM-DD/email_report.md` (today's date folder)
+- Priority order: High → Medium → Low (within each priority, newest first)
+
+**Critical Priority Rules:**
+1. **ALL surveys** = Minimum Medium priority (regardless of sender)
+2. **Construction/vendor emails** = Minimum Medium priority (never Low)
 
 ## Steps to Execute
 
 ### 1. Search for Recent Emails
-Use the Gmail search function to find emails from the last 24 hours (or specified time period):
+Use the Gmail search function to find emails from the last 24 hours:
 
 ```
 mcp_google_workspace_search_gmail_messages(
@@ -140,31 +157,49 @@ Generate a comprehensive markdown report (`email_report.md`) with the following 
 - **Construction/Vendor Updates:** Any informational emails from construction companies, vendors, suppliers, material providers, or industry partners (e.g., Tilcon, Galasso, O&G Industries, equipment dealers, etc.) should be marked as Medium priority minimum, even if they appear to be routine updates or schedules.
 
 ### 10. Save Report
-Save the completed report inside the date-specific reports folder so everything from the same day is bundled together:
+Save the completed report inside **today's** date folder (not yesterday's):
+
+```python
+from datetime import datetime
+today = datetime.now().strftime('%Y-%m-%d')
+report_path = f"reports/{today}/email_report.md"
 ```
-DATE=$(date +%F)  # or whichever date the workflow covers
-mkdir -p /Users/ndamico/agents/reports/${DATE}
-/Users/ndamico/agents/reports/${DATE}/email_report.md
-```
 
-## Example Query to Trigger This Workflow
+**Important:** Use today's date for the folder (same as timesheet report), even though you're analyzing emails from the last 24 hours. This keeps all of today's reports together.
 
-When the user asks to:
-- "Check my emails"
-- "What emails do I have?"
-- "Review my inbox"
-- "Create an email report"
-- "Analyze my emails"
+---
 
-Execute this workflow to:
-1. Search for recent emails
-2. Retrieve and analyze content
-3. Generate comprehensive markdown report
-4. Present findings with prioritized action items
+## Priority Rules
+
+### 🔴 High Priority
+- Deadlines (quotes, bids, responses needed)
+- Project estimates/quotes needed
+- Bid opportunities with submission deadlines
+- Follow-ups requiring immediate response
+
+### 🟡 Medium Priority
+- **ALL surveys** (regardless of sender)
+- Construction/vendor updates (schedules, plant closings, etc.)
+- Business emails requiring action
+- Industry partner communications
+
+### 🟢 Low Priority
+- Marketing/promotional emails
+- Newsletters
+- Personal items
+- Informational only (non-construction related)
+
+**Critical Rules:**
+1. **Surveys:** ALL surveys must be marked as at least Medium priority, regardless of sender
+2. **Construction Companies & Vendors:** Any email from construction companies, vendors, suppliers, material providers, equipment dealers, or industry partners must NEVER be marked as Low priority (minimum Medium)
+
+---
 
 ## Key Email Address
 - Primary: `bdamico@damicoconstruction.net`
 - Alternative: `bill@damico.construction` (may receive some emails)
+
+---
 
 ## Notes
 - Always check for emails from the last 24 hours by default
@@ -172,14 +207,9 @@ Execute this workflow to:
 - Pay special attention to construction-related emails, bid opportunities, and project estimates
 - Extract all deadlines and contact information for easy reference
 - Categorize marketing emails separately to reduce clutter in priority sections
+- Reports are saved to `reports/YYYY-MM-DD/` (today's date folder)
 
-## Critical Priority Rules
-1. **Surveys:** ALL surveys must be marked as at least Medium priority, regardless of sender (RingCentral, vendors, clients, etc.). Nick D'Amico wants to see all surveys.
-2. **Construction Companies & Vendors:** Any email from construction companies, vendors, suppliers, material providers, equipment dealers, or industry partners containing information, updates, schedules, or announcements must NEVER be marked as Low priority. Examples include:
-   - Plant closing schedules (Tilcon, Galasso, O&G Industries, etc.)
-   - Winter hours/schedules
-   - Material availability updates
-   - Equipment financing offers from construction equipment dealers
-   - Industry news or updates
-   - These should be marked as Medium priority minimum, even if they appear purely informational.
+---
+
+**Last Updated:** 2025-11-22
 

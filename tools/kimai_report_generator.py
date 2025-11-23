@@ -467,8 +467,9 @@ def generate_daily_report(date_str):
     else:
         report += "✅ No active timers - everyone is clocked out.\n"
     
-    # Save report in date-organized folder
-    date_dir = REPORTS_DIR / date_str
+    # Save report in today's date folder (reports are for yesterday, but saved in today's folder)
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    date_dir = REPORTS_DIR / today_str
     date_dir.mkdir(parents=True, exist_ok=True)
     report_file = date_dir / f"kimai_daily_report_{date_str}.md"
     report_file.write_text(report)

@@ -1,96 +1,62 @@
 # Morning Playbook - D'amico Construction
 
-**Support Agent Instructions:** Every morning, when you read this README, you must immediately run both daily workflows to generate the morning reports for Nick D'Amico.
+AI agent and MCP server management for Nick D'Amico, owner of D'amico Construction (paving, milling, sitework).
 
-## Daily Morning Workflow
+## Quick Start
 
-Upon reading this README, execute the following workflows in order:
+**For AI Agents:** Run `just start` - This is your entry point. It will show status and guide you to `workflows/onboarding.md` for full onboarding.
 
-### 1. Kimai Daily Report
-**Workflow File:** `workflows/kimai_daily_weekly_report_instructions.md`
+```bash
+just start    # See status and get started (AI agents: read workflows/onboarding.md next)
+just          # See all available commands
+```
 
-Follow the instructions to generate the daily timesheet report:
-- Query Kimai API for today's timesheet data
-- Analyze hours worked, clock-in/out status
-- Detect suspicious activity (over 13 hours, not clocked out, stale timers)
-- Generate markdown report
+## Structure
 
-**Output:** `reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md`
+- `justfile` - All commands (run `just` to see them)
+- `workflows/` - Workflow instructions
+  - `daily.md` - Main daily morning workflow (orchestrator)
+  - `weekly.md` - Main weekly workflow (orchestrator)
+  - `kimai/` - Timesheet reporting workflows
+  - `email/` - Email analysis workflows
+- `tools/` - Executable scripts
+- `reports/` - Generated reports (organized by date, archived to `history/`)
 
-### 2. Email Analysis Report
-**Workflow File:** `workflows/email_analysis_instructions.md`
+## For AI Agents
 
-Follow the instructions to analyze and prioritize emails:
-- Search for emails from the last 24 hours
-- Retrieve full email content
-- Analyze and categorize emails
-- Generate prioritized markdown report
+### First Time Setup
 
-**Output:** `reports/YYYY-MM-DD/email_report.md`
+1. **Start here:** Run `just start` - This shows current status and context
+2. **Check status:** See what's been done today and what's pending
+3. **Read workflows:** Review `workflows/daily.md` for the main morning workflow
+4. **Execute:** Run `just morning` to execute all daily workflows
 
-**Important:** Both reports should be saved in the same date folder (e.g., `reports/2025-11-18/`) so everything from the same day is bundled together.
+### Daily Workflow
+
+When starting a new day:
+1. Run `just start` to see status
+2. Run `just morning` - This automatically:
+   - Archives yesterday's reports to `reports/history/`
+   - Generates timesheet report for yesterday
+   - Reminds you to run email analysis
+3. Execute email analysis workflow (see `workflows/email/daily.md`)
+4. Both reports will be in `reports/YYYY-MM-DD/` (today's date folder)
+
+### Important Notes
+
+- **Date Logic:** Reports are saved in today's folder (e.g., `reports/2025-11-22/`) because they're generated this morning, even though timesheet data is from yesterday
+- **Timesheet Report:** Automated via `just kimai-daily` - queries yesterday's data
+- **Email Analysis:** Manual workflow requiring MCP tools (see `workflows/email/daily.md`)
+
+All workflows are exposed through the justfile. Run `just` to see everything available.
+
+## Main Workflows
+
+- **Daily Morning:** `just morning` - Runs all daily workflows
+- **Weekly:** `just weekly` - Runs weekly workflows
+
+See `workflows/daily.md` and `workflows/weekly.md` for orchestrator details.
 
 ---
 
-## Available Workflows
-
-### Email Analysis Workflow
-**File:** `workflows/email_analysis_instructions.md`
-
-This workflow provides step-by-step instructions for:
-- Searching and retrieving emails from Gmail
-- Analyzing email content and extracting key information
-- Generating a comprehensive markdown report with prioritized action items
-
-**Output:** Creates `reports/YYYY-MM-DD/email_report.md` with:
-- Executive summary
-- Detailed email breakdown (ordered by priority: High → Medium → Low, newest first)
-- Priority action items
-- Important dates calendar
-- Contact directory
-- Project summaries
-- Recommended next steps
-
-**Priority Rules:**
-- ALL surveys must be marked as at least Medium priority
-- Construction/vendor emails must NEVER be marked as Low priority (minimum Medium)
-
-### Kimai Daily & Weekly Report Workflow
-**File:** `workflows/kimai_daily_weekly_report_instructions.md`
-
-This workflow provides step-by-step instructions for:
-- Analyzing Kimai timesheet data for daily and weekly reports
-- Detecting suspicious activity (over 13 hours, not clocked out, etc.)
-- Monitoring active timers and stale entries
-- Generating comprehensive markdown reports with alerts
-
-**Daily Report Output:** Creates `reports/YYYY-MM-DD/kimai_daily_report_YYYY-MM-DD.md` with:
-- Executive summary (employees worked, total hours, suspicious activities)
-- Daily work summary table (all employees with hours and status)
-- Suspicious activity alerts (over 13 hours, not clocked out, stale timers)
-- Active timers list (currently clocked in employees)
-- Detailed breakdown per employee
-
-**Weekly Report Output:** Creates `reports/YYYY-MM-DD/kimai_weekly_report_YYYY-MM-DD.md` with:
-- Executive summary (week range, total hours, averages)
-- Weekly summary by employee (total hours, days worked, averages)
-- Suspicious activity alerts (excessive hours, multiple long days, unclosed entries)
-- Top performers
-- Project summary
-- Daily breakdown table
-
-**Suspicious Activity Detection:**
-- 🔴 Critical: Not clocked out, stale timers (> 24h), very long entries (> 14h)
-- ⚠️ Warning: Over 13 hours, excessive weekly hours (> 60h), multiple long days
-- 🟡 Low: Very short entries, inconsistent patterns
-
-**Note:** The workflow uses the Kimai API directly (bypassing MCP server bug) to ensure `?user=all` parameter is properly passed.
-
-## Tools
-
-**File:** `tools/kimai_report_generator.py`
-
-Python script for generating Kimai reports:
-- Daily reports: `python3 tools/kimai_report_generator.py --daily`
-- Weekly reports: `python3 tools/kimai_report_generator.py --weekly`
-- Both: `python3 tools/kimai_report_generator.py --both`
+**Last Updated:** 2025-11-22

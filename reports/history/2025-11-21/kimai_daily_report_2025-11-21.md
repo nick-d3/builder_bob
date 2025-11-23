@@ -1,6 +1,6 @@
 # Kimai Daily Report - 2025-11-21
 
-**Generated:** 2025-11-22 11:05:31
+**Generated:** 2025-11-22 20:26:15
 
 ---
 
@@ -188,7 +188,7 @@
 
 ### Stale Active Timers (> 24 hours)
 
-- **Carl Robinson** (User 9): Running for 28.8 hours (started 2025-11-21T06:15:00-0500)
+- **Carl Robinson** (User 9): Running for 38.2 hours (started 2025-11-21T06:15:00-0500)
 
 ---
 
