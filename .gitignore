@@ -20,3 +20,7 @@ ENV/
 *.swp
 *.swo
 
+# Generated reports (temporary files only)
+reports/**/.pandoc_header.tex
+reports/**/.combined_report.html
+# Note: PDFs are tracked for historical records

@@ -17,13 +17,13 @@ Automates the process of analyzing Kimai timesheet data to generate weekly repor
 ## Steps to Execute
 
 ### 1. Use the Custom Python Tool
-**IMPORTANT:** Use the custom Python script `tools/kimai_report_generator.py` to generate the weekly report. This tool handles all API calls, data analysis, and report generation automatically.
+**IMPORTANT:** Use the custom Python script `tools/reporting/kimai_report_generator.py` to generate the weekly report. This tool handles all API calls, data analysis, and report generation automatically.
 
 **Command:**
 ```bash
 just kimai-weekly
 # Or directly:
-python3 tools/kimai_report_generator.py --weekly
+python3 tools/reporting/kimai_report_generator.py --weekly
 ```
 
 This will:
@@ -60,7 +60,7 @@ If you need to generate a report for a specific week, use:
 ```bash
 just kimai-weekly-date 2025-11-17
 # Or directly:
-python3 tools/kimai_report_generator.py --weekly --week 2025-11-17
+python3 tools/reporting/kimai_report_generator.py --weekly --week 2025-11-17
 ```
 (Provide Monday's date for the week)
 

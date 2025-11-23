@@ -17,13 +17,13 @@ Automates the process of analyzing Kimai timesheet data to generate daily report
 ## Steps to Execute
 
 ### 1. Use the Custom Python Tool
-**IMPORTANT:** Use the custom Python script `tools/kimai_report_generator.py` to generate the daily report. This tool handles all API calls, data analysis, and report generation automatically.
+**IMPORTANT:** Use the custom Python script `tools/reporting/kimai_report_generator.py` to generate the daily report. This tool handles all API calls, data analysis, and report generation automatically.
 
 **Command:**
 ```bash
 just kimai-daily
 # Or directly:
-python3 tools/kimai_report_generator.py --daily
+python3 tools/reporting/kimai_report_generator.py --daily
 ```
 
 This will:
@@ -70,7 +70,7 @@ If you need to generate a report for a specific date (not yesterday), use:
 ```bash
 just kimai-daily-date 2025-11-21
 # Or directly:
-python3 tools/kimai_report_generator.py --daily --date 2025-11-21
+python3 tools/reporting/kimai_report_generator.py --daily --date 2025-11-21
 ```
 
 **Note:** The tool uses the Kimai API directly with the `?user=all` parameter to bypass MCP server limitations and ensure all employees' data is retrieved.

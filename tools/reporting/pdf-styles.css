@@ -1,0 +1,377 @@
+/* Professional PDF Report Styling */
+
+/* Berkeley Mono Font */
+/* Berkeley Mono font - installed system-wide, referenced by name */
+
+@page {
+  size: letter;
+  margin: 0.75in;
+  @top-center {
+    content: "D'amico Construction - Daily Report";
+    font-size: 9pt;
+    color: #666;
+    font-family: "Berkeley Mono", monospace;
+  }
+  @bottom-center {
+    content: "Page " counter(page);
+    font-size: 9pt;
+    color: #666;
+    font-family: "Berkeley Mono", monospace;
+  }
+}
+
+/* Cover page - different header on first page (current date) */
+/* Note: Chrome's headless mode has limited support for CSS Paged Media */
+/* The actual date is injected dynamically in combine_reports_pdf.py */
+
+body {
+  font-family: "Berkeley Mono", "Courier New", monospace;
+  font-size: 11pt;
+  line-height: 1.5;
+  color: #000;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Typography */
+h1 {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 20pt;
+  font-weight: bold;
+  color: #000;
+  margin-top: 0.5em;
+  text-align: center;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 2px solid #000;
+  page-break-after: avoid;
+}
+
+/* Force page break before first main report (after cover and TOC) */
+/* This targets the first h1 that's not in the cover page */
+body > h1:first-of-type,
+body > div:not(.cover-page) + h1,
+#TOC + h1 {
+  page-break-before: always !important;
+  break-before: page !important;
+}
+
+/* Force page break before Email Analysis Report */
+h1:has-text("Email Analysis"),
+h1:contains("Email Analysis") {
+  page-break-before: always !important;
+  break-before: page !important;
+}
+
+h2 {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 16pt;
+  font-weight: bold;
+  color: #000;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  page-break-after: avoid;
+}
+
+h3 {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 13pt;
+  font-weight: bold;
+  color: #000;
+  margin-top: 1em;
+  margin-bottom: 0.4em;
+  page-break-after: avoid;
+}
+
+h4, h5, h6 {
+  font-family: "Berkeley Mono", monospace;
+  font-weight: bold;
+  color: #000;
+  margin-top: 0.8em;
+  margin-bottom: 0.3em;
+  page-break-after: avoid;
+}
+
+p {
+  margin: 0.5em 0;
+  text-align: justify;
+}
+
+/* Table styling with full borders - professional look */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  border: 2px solid #000;
+  font-size: 10pt;
+  page-break-inside: avoid;
+  table-layout: fixed;
+}
+
+th, td {
+  border: 1px solid #000;
+  padding: 0.4em 0.6em;
+  text-align: left;
+  vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+th {
+  background-color: #e8e8e8;
+  font-weight: bold;
+  font-family: "Berkeley Mono", monospace;
+  text-align: center;
+}
+
+/* Column width adjustments for Daily Work Summary table */
+/* User ID column (1st column) - narrow */
+th:nth-child(1),
+td:nth-child(1) {
+  width: 8%;
+  text-align: center;
+}
+
+/* Name column (2nd column) - wider */
+th:nth-child(2),
+td:nth-child(2) {
+  width: 25%;
+}
+
+/* Entries column (3rd column) - narrow */
+th:nth-child(3),
+td:nth-child(3) {
+  width: 8%;
+  text-align: center;
+}
+
+/* Hours column (4th column) */
+th:nth-child(4),
+td:nth-child(4) {
+  width: 10%;
+  text-align: center;
+}
+
+/* Clock In column (5th column) */
+th:nth-child(5),
+td:nth-child(5) {
+  width: 12%;
+  text-align: center;
+}
+
+/* Clock Out column (6th column) */
+th:nth-child(6),
+td:nth-child(6) {
+  width: 12%;
+  text-align: center;
+}
+
+/* Status column (7th column) */
+th:nth-child(7),
+td:nth-child(7) {
+  width: 15%;
+  text-align: center;
+}
+
+/* Two-column "No Entry" table - fixed widths for ID | Name | ID | Name */
+.no-entry-table table th:nth-child(1),
+.no-entry-table table td:nth-child(1) {
+  width: 10%;
+  text-align: center;
+}
+
+.no-entry-table table th:nth-child(2),
+.no-entry-table table td:nth-child(2) {
+  width: 40%;
+}
+
+.no-entry-table table th:nth-child(3),
+.no-entry-table table td:nth-child(3) {
+  width: 10%;
+  text-align: center;
+}
+
+.no-entry-table table th:nth-child(4),
+.no-entry-table table td:nth-child(4) {
+  width: 40%;
+}
+
+tr:nth-child(even) {
+  background-color: #f8f8f8;
+}
+
+/* Code blocks - minimal styling for PDF */
+code {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 9pt;
+  background-color: #f5f5f5;
+  padding: 0.15em 0.3em;
+  border: 1px solid #ddd;
+}
+
+pre {
+  background-color: #f5f5f5;
+  padding: 0.8em;
+  border: 1px solid #ddd;
+  overflow-x: auto;
+  font-family: "Berkeley Mono", monospace;
+  font-size: 9pt;
+  page-break-inside: avoid;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+  border: none;
+}
+
+/* Links - subtle for PDF */
+a {
+  color: #000;
+  text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+  margin: 0.5em 0;
+  padding-left: 2em;
+}
+
+li {
+  margin: 0.3em 0;
+}
+
+/* Page breaks */
+.page-break {
+  page-break-before: always;
+}
+
+.report-page-break {
+  page-break-before: always;
+}
+
+h1, h2 {
+  page-break-after: avoid;
+}
+
+/* Table of contents styling */
+#TOC {
+  margin-top: 2em;
+  margin-bottom: 2em;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  padding: 1em 0;
+  page-break-before: avoid;
+}
+
+#TOC ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#TOC li {
+  margin: 0.3em 0;
+}
+
+#TOC a {
+  text-decoration: none;
+  color: #000;
+}
+
+/* Horizontal rules */
+hr {
+  border: none;
+  border-top: 1px solid #000;
+  margin: 1.5em 0;
+}
+
+/* Blockquotes */
+blockquote {
+  margin: 1em 2em;
+  padding-left: 1em;
+  border-left: 3px solid #ccc;
+  font-style: italic;
+  color: #555;
+}
+
+/* Cover Page Styling */
+.cover-page {
+  page-break-after: avoid;
+  min-height: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: center;
+  margin: 0;
+  padding: 1em 0 0.5em 0;
+}
+
+.cover-content {
+  width: 100%;
+  max-width: 600px;
+}
+
+.cover-title {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 36pt;
+  font-weight: bold;
+  color: #000;
+  margin: 0 0 0.1em 0;
+  padding: 0;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
+.cover-subtitle {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 24pt;
+  font-weight: normal;
+  color: #333;
+  margin: 0.2em 0;
+  padding: 0;
+  font-style: italic;
+  line-height: 1.1;
+}
+
+.cover-date {
+  font-family: "Berkeley Mono", monospace;
+  font-size: 18pt;
+  color: #000;
+  margin: 0.5em 0;
+  padding: 0;
+  font-weight: normal;
+  line-height: 1.1;
+}
+
+.cover-divider {
+  width: 200px;
+  height: 3px;
+  background-color: #000;
+  margin: 0.5em auto;
+}
+
+.cover-footer {
+  margin-top: 0.5em;
+  font-family: "Berkeley Mono", monospace;
+  font-size: 14pt;
+  color: #666;
+  text-align: center;
+}
+
+.cover-footer p {
+  margin: 0.3em 0;
+  font-style: italic;
+  text-align: center;
+}
+
+/* When TOC follows cover page, reduce cover spacing */
+.cover-page + #TOC {
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+}
+
+

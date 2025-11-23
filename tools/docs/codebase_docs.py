@@ -85,10 +85,10 @@ def generate_codebase_output():
     if readme.exists():
         files_to_include.append(readme)
     
-    # Add all Python files in tools/
+    # Add all Python files in tools/ (recursively)
     tools_dir = REPO_ROOT / "tools"
     if tools_dir.exists():
-        for py_file in sorted(tools_dir.glob("*.py")):
+        for py_file in sorted(tools_dir.rglob("*.py")):
             files_to_include.append(py_file)
     
     # Add all markdown files in workflows/

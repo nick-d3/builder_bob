@@ -22,6 +22,7 @@ default:
     @echo "🛠️  Utilities:"
     @echo "  just status            - Check today's status"
     @echo "  just docs              - Show all source code"
+    @echo "  just pdf-report [DATE] - Combine all reports into single PDF"
     @echo ""
 
 # Entry point for AI agents - shows status and context
@@ -30,23 +31,23 @@ start:
     @echo ""
     @echo "👋 Welcome! You're helping Nick D'Amico manage daily workflows."
     @echo ""
-    @python3 tools/status_check.py
+    @python3 tools/utils/status_check.py
     @echo ""
     @echo "📖 Full onboarding: Read workflows/onboarding.md"
     @echo ""
     @echo "💡 Today's Context:"
-    @python3 tools/context.py
+    @python3 tools/utils/context.py
     @echo ""
     @echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     @echo "🎯 ACTION REQUIRED:"
-    @python3 tools/action_check.py
+    @python3 tools/utils/action_check.py
     @echo ""
     @echo "📋 All Commands: just (to see full list)"
     @echo ""
 
 # Check today's status (what's been done)
 status:
-    python3 tools/status_check.py
+    python3 tools/utils/status_check.py
 
 # Run all morning workflows
 # Archives yesterday's reports, then generates today's reports
@@ -67,7 +68,7 @@ morning:
 
 # Archive yesterday's reports to history
 archive-yesterday:
-    python3 tools/archive_yesterday.py
+    python3 tools/utils/archive_yesterday.py
 
 # Weekly workflow
 weekly:
@@ -80,29 +81,29 @@ weekly:
 # Show all source code in the repository
 # Excludes reports/ directory
 docs:
-    python3 tools/codebase_docs.py
+    python3 tools/docs/codebase_docs.py
 
 # Generate Kimai daily report (for yesterday)
 kimai-daily:
-    python3 tools/kimai_report_generator.py --daily
+    python3 tools/reporting/kimai_report_generator.py --daily
 
 # Generate Kimai weekly report (for last week)
 kimai-weekly:
-    python3 tools/kimai_report_generator.py --weekly
+    python3 tools/reporting/kimai_report_generator.py --weekly
 
 # Generate both Kimai reports
 kimai-both:
-    python3 tools/kimai_report_generator.py --both
+    python3 tools/reporting/kimai_report_generator.py --both
 
 # Generate Kimai daily report for a specific date
 # Usage: just kimai-daily-date 2025-11-21
 kimai-daily-date DATE:
-    python3 tools/kimai_report_generator.py --daily --date {{DATE}}
+    python3 tools/reporting/kimai_report_generator.py --daily --date {{DATE}}
 
 # Generate Kimai weekly report for a specific week (Monday date)
 # Usage: just kimai-weekly-date 2025-11-17
 kimai-weekly-date DATE:
-    python3 tools/kimai_report_generator.py --weekly --week {{DATE}}
+    python3 tools/reporting/kimai_report_generator.py --weekly --week {{DATE}}
 
 # Email analysis (manual - shows instructions)
 email-analysis:
@@ -118,3 +119,8 @@ email-analysis:
     @echo "  3. Analyze and prioritize"
     @echo "  4. Generate markdown report"
     @echo "  5. Save to reports/YYYY-MM-DD/email_report.md"
+
+# Combine all reports in a date directory into a single PDF
+# Usage: just pdf-report [DATE] (defaults to today)
+pdf-report DATE='':
+    @PATH="/Library/TeX/texbin:/usr/local/bin:/opt/homebrew/bin:$$PATH" /usr/bin/python3 tools/reporting/combine_reports_pdf.py {{DATE}}

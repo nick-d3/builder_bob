@@ -18,6 +18,7 @@ import requests
 from datetime import datetime, timedelta
 from collections import defaultdict
 from pathlib import Path
+import subprocess
 
 # Configuration
 KIMAI_URL = "https://tracking.damico.construction"
@@ -33,6 +34,14 @@ USER_MAP = {
     18: "Timothy Genovese", 19: "Steven Hechevarria", 20: "Christopher Johnson",
     21: "Oscar Morales", 22: "Benjamin Paxton", 23: "Bill Rivera", 24: "Colby Sanden",
     25: "Randall Wuchert", 26: "Mike Echevarria"
+}
+
+# Whitelist: User IDs to exclude from "No Entry" section (e.g., admin, office staff who don't clock in)
+WHITELIST_USER_IDS = {
+    1,   # admin
+    4,   # nbendas
+    19,  # Steven Hechevarria
+    20,  # Christopher Johnson
 }
 
 
@@ -178,9 +187,9 @@ def analyze_daily(timesheets, user_map):
             'clock_times': clock_times
         })
     
-    # Add employees who didn't clock in (0 hours)
+    # Add employees who didn't clock in (0 hours) - exclude whitelisted users
     for user_id, name in user_map.items():
-        if user_id not in by_user:
+        if user_id not in by_user and user_id not in WHITELIST_USER_IDS:
             results.append({
                 'user_id': user_id,
                 'name': name,
@@ -355,68 +364,36 @@ def generate_daily_report(date_str):
     
     results, suspicious = analyze_daily(timesheets, user_map)
     
+    # Count unique suspicious activities (deduplicate stale timers that are also not clocked out)
+    stale_timer_user_ids = {timer['user_id'] for timer in stale_timers}
+    not_clocked_out_user_ids = {item['user_id'] for item in suspicious['not_clocked_out']}
+    # Stale timers that are already counted as "not clocked out" shouldn't be double-counted
+    unique_stale_timers = [t for t in stale_timers if t['user_id'] not in not_clocked_out_user_ids]
+    
+    suspicious_count = (
+        len(suspicious['over_13h']) + 
+        len(suspicious['not_clocked_out']) + 
+        len(unique_stale_timers)
+    )
+    
     # Generate markdown report
-    report = f"""# Kimai Daily Report - {date_str}
+    report = f"""<div align="center">
 
-**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+# Employee Time Tracking Report
 
----
+</div>
 
-## Executive Summary
-
-- **Date:** {date_str}
-- **Total Employees:** {len(results)}
+- **Total Employees:** {len(results) + len(WHITELIST_USER_IDS)}
 - **Employees Worked:** {len([r for r in results if r['hours'] > 0])}
 - **Employees Not Clocked In:** {len([r for r in results if r['hours'] == 0])}
 - **Total Hours:** {sum(r['hours'] for r in results):.2f} hours
-- **Suspicious Activities:** {len(suspicious['over_13h']) + len(suspicious['not_clocked_out']) + len(stale_timers)}
+- **Suspicious Activities:** {suspicious_count}
 
 ---
 
-## Daily Work Summary
+## 🔴 Critical Issues
 
-| User ID | Name | Entries | Hours | Clock In | Clock Out | Status |
-|---------|------|---------|-------|----------|-----------|--------|
 """
-    
-    for r in results:
-        status = []
-        if r['unclosed'] > 0:
-            status.append(f"⚠️ {r['unclosed']} NOT CLOCKED OUT")
-        if r['over_13h']:
-            status.append("🔴 OVER 13 HOURS")
-        status_str = " | ".join(status) if status else ("✅ OK" if r['hours'] > 0 else "⚪ No Entry")
-        
-        # Format clock in/out times
-        clock_in_str = r.get('first_clock_in', '—') or '—'
-        clock_out_str = r.get('last_clock_out', '—') or '—'
-        if r['unclosed'] > 0:
-            clock_out_str = '⏱️ Still In'
-        
-        report += f"| {r['user_id']} | {r['name']} | {r['entries']} | {r['hours']}h | {clock_in_str} | {clock_out_str} | {status_str} |\n"
-    
-    report += "\n---\n\n## Detailed Clock-In/Out Times\n\n"
-    
-    # Add detailed breakdown for employees who worked
-    employees_worked = [r for r in results if r['hours'] > 0]
-    if employees_worked:
-        for r in employees_worked:
-            report += f"### {r['name']} (User {r['user_id']})\n\n"
-            if r.get('clock_times'):
-                report += "| Entry | Clock In | Clock Out | Hours |\n"
-                report += "|-------|----------|-----------|-------|\n"
-                for idx, ct in enumerate(r['clock_times'], 1):
-                    clock_in = ct['clock_in'] or '—'
-                    clock_out = ct['clock_out'] or '⏱️ Still In'
-                    hours = f"{ct['duration']}h" if ct['duration'] is not None else '—'
-                    report += f"| {idx} | {clock_in} | {clock_out} | {hours} |\n"
-                report += f"\n**Total:** {r['hours']} hours\n\n"
-            else:
-                report += "No clock-in/out data available.\n\n"
-    else:
-        report += "No employees clocked in today.\n\n"
-    
-    report += "---\n\n## 🔴 Critical Issues\n\n"
     
     if suspicious['not_clocked_out']:
         report += "### Employees Who Did Not Clock Out\n\n"
@@ -427,7 +404,7 @@ def generate_daily_report(date_str):
     if stale_timers:
         report += "### Stale Active Timers (> 24 hours)\n\n"
         for timer in stale_timers:
-            report += f"- **{timer['name']}** (User {timer['user_id']}): Running for {timer['hours_running']} hours (started {timer['start_time']})\n"
+            report += f"- **{timer['name']}** (User {timer['user_id']}): Running for {timer['hours_running']} hours\n"
         report += "\n"
     
     if suspicious['very_long_entry']:
@@ -460,12 +437,109 @@ def generate_daily_report(date_str):
     
     if active_timers:
         report += f"**Currently Clocked In:** {len(active_timers)} employees\n\n"
-        report += "| Name | User ID | Started | Running For |\n"
-        report += "|------|---------|--------|-------------|\n"
+        report += "| Name | ID | Started | Running For |\n"
+        report += "|------|----|--------|-------------|\n"
         for timer in active_timers:
             report += f"| {timer['name']} | {timer['user_id']} | {timer['start_time']} | {timer.get('hours_running', 'N/A')}h |\n"
     else:
         report += "✅ No active timers - everyone is clocked out.\n"
+    
+    report += "\n---\n\n## Employee Timecard Tables\n\n"
+    
+    # Separate employees into three groups: warnings, good, no entry
+    employees_warnings = []
+    employees_good = []
+    employees_no_entry = []
+    
+    for r in results:
+        status = []
+        if r['unclosed'] > 0:
+            status.append(f"⚠️ {r['unclosed']} NOT CLOCKED OUT")
+        if r['over_13h']:
+            status.append("🔴 OVER 13 HOURS")
+        status_str = " | ".join(status) if status else ("✅ OK" if r['hours'] > 0 else "⚪ No Entry")
+        
+        # Format clock in/out times
+        clock_in_str = r.get('first_clock_in', '—') or '—'
+        clock_out_str = r.get('last_clock_out', '—') or '—'
+        if r['unclosed'] > 0:
+            clock_out_str = '⏱️ Still In'
+        
+        row_data = {
+            'user_id': r['user_id'],
+            'name': r['name'],
+            'entries': r['entries'],
+            'hours': r['hours'],
+            'clock_in': clock_in_str,
+            'clock_out': clock_out_str,
+            'status': status_str,
+            'has_warning': len(status) > 0
+        }
+        
+        # Categorize: warnings first, then good, then no entry (exclude whitelisted)
+        if row_data['has_warning']:
+            employees_warnings.append(row_data)
+        elif r['hours'] > 0:
+            employees_good.append(row_data)
+        elif r['user_id'] not in WHITELIST_USER_IDS:
+            employees_no_entry.append(row_data)
+    
+    # Table 1: Employees with warnings
+    if employees_warnings:
+        report += "### ⚠️ Warnings\n\n"
+        report += "| ID | Name | Entries | Clock In | Clock Out | Hours | Status |\n"
+        report += "|----|------|---------|----------|-----------|-------|--------|\n"
+        for r in employees_warnings:
+            report += f"| {r['user_id']} | {r['name']} | {r['entries']} | {r['clock_in']} | {r['clock_out']} | {r['hours']}h | {r['status']} |\n"
+        report += "\n"
+    
+    # Table 2: Employees who are good (no issues)
+    if employees_good:
+        report += "### ✅ All Good\n\n"
+        report += "| ID | Name | Entries | Clock In | Clock Out | Hours | Status |\n"
+        report += "|----|------|---------|----------|-----------|-------|--------|\n"
+        for r in employees_good:
+            report += f"| {r['user_id']} | {r['name']} | {r['entries']} | {r['clock_in']} | {r['clock_out']} | {r['hours']}h | {r['status']} |\n"
+        report += "\n"
+    
+    # Compact two-column table for employees with no entry (just ID and Name - removes redundant zeros/dashes)
+    if employees_no_entry:
+        report += "### ⚪ No Entry\n\n"
+        report += '<div class="no-entry-table">\n\n'
+        report += "| ID | Name | ID | Name |\n"
+        report += "|----|------|----|------|\n"
+        # Split into pairs for two-column layout
+        for i in range(0, len(employees_no_entry), 2):
+            r1 = employees_no_entry[i]
+            if i + 1 < len(employees_no_entry):
+                r2 = employees_no_entry[i + 1]
+                report += f"| {r1['user_id']} | {r1['name']} | {r2['user_id']} | {r2['name']} |\n"
+            else:
+                # Last row with only one entry
+                report += f"| {r1['user_id']} | {r1['name']} | | |\n"
+        report += "\n</div>\n\n"
+    
+    # Add detailed breakdown only for employees with multiple entries (2+ separate clock-in/out pairs)
+    employees_with_multiple_entries = [r for r in results if r['hours'] > 0 and r['entries'] > 1]
+    
+    if employees_with_multiple_entries:
+        report += "\n---\n\n## Detailed Clock-In/Out Times\n\n"
+        for r in employees_with_multiple_entries:
+            report += f"### {r['name']} (User {r['user_id']})\n\n"
+            if r.get('clock_times'):
+                report += "| Entry | Clock In | Clock Out | Hours |\n"
+                report += "|-------|----------|-----------|-------|\n"
+                for idx, ct in enumerate(r['clock_times'], 1):
+                    clock_in = ct['clock_in'] or '—'
+                    clock_out = ct['clock_out'] or '⏱️ Still In'
+                    hours = f"{ct['duration']}h" if ct['duration'] is not None else '—'
+                    report += f"| {idx} | {clock_in} | {clock_out} | {hours} |\n"
+                report += f"\n**Total:** {r['hours']} hours\n\n"
+            else:
+                report += "No clock-in/out data available.\n\n"
+    
+    # Add generated timestamp at the end
+    report += f"\n---\n\n**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
     
     # Save report in today's date folder (reports are for yesterday, but saved in today's folder)
     today_str = datetime.now().strftime('%Y-%m-%d')
@@ -474,6 +548,14 @@ def generate_daily_report(date_str):
     report_file = date_dir / f"kimai_daily_report_{date_str}.md"
     report_file.write_text(report)
     print(f"✅ Daily report saved to: {report_file}")
+    
+    # Automatically generate PDF after creating markdown report
+    try:
+        pdf_script = Path(__file__).parent.parent / "reporting" / "combine_reports_pdf.py"
+        if pdf_script.exists():
+            subprocess.run(["/usr/bin/python3", str(pdf_script)], check=False, cwd=REPORTS_DIR.parent)
+    except Exception as e:
+        print(f"⚠️  PDF generation skipped: {e}")
     
     return report_file
 
@@ -512,8 +594,8 @@ def generate_weekly_report(monday_date):
 
 ## Weekly Summary by Employee
 
-| User ID | Name | Total Hours | Days Worked | Avg Hours/Day | Days > 13h | Status |
-|---------|------|-------------|-------------|---------------|------------|--------|
+| ID | Name | Total Hours | Days Worked | Avg Hours/Day | Days > 13h | Status |
+|----|------|-------------|-------------|---------------|------------|--------|
 """
     
     for r in results:
