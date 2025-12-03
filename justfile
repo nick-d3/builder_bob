@@ -22,6 +22,7 @@ default:
     @echo "🛠️  Utilities:"
     @echo "  just status            - Check today's status"
     @echo "  just docs              - Show all source code"
+    @echo "  just read-all          - Read all files (including reports)"
     @echo "  just pdf-report [DATE] - Combine all reports into single PDF"
     @echo ""
 
@@ -82,6 +83,11 @@ weekly:
 # Excludes reports/ directory
 docs:
     python3 tools/docs/codebase_docs.py
+
+# Read all files in the repository (including reports)
+# Usage: just read-all [--no-reports] [--output FILE]
+read-all:
+    python3 tools/docs/read_all_files.py
 
 # Generate Kimai daily report (for yesterday)
 kimai-daily:

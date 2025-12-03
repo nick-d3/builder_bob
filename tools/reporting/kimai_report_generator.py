@@ -22,7 +22,7 @@ import subprocess
 
 # Configuration
 KIMAI_URL = "https://tracking.damico.construction"
-KIMAI_TOKEN = "5f3d0820c5af4456937441752"  # Admin token with view_other_timesheet permission
+KIMAI_TOKEN = "828f0382d52e29b0ddfbc49fb"  # Admin token with view_other_timesheet permission
 REPORTS_DIR = Path("/Users/ndamico/Agent/builder/reports")
 
 # User ID to name mapping (can be fetched dynamically)
