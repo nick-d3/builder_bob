@@ -47,26 +47,24 @@ def combine_reports_to_pdf(date_str=None):
         print(f"❌ Reports directory not found: {date_dir}")
         return False
     
-    # Find all markdown files in the directory
-    md_files = sorted(date_dir.glob("*.md"))
+    # Find all markdown files in the directory (exclude subdirectories and project reports)
+    md_files = sorted([f for f in date_dir.glob("*.md") if not f.parent.name.startswith("project_reports")])
     
     if not md_files:
         print(f"⚠️  No markdown reports found in {date_dir}")
         return False
     
-    # Order files: timesheet first, then email, then others
+    # Order files: timesheet first, then email, exclude project reports
     ordered_files = []
-    other_files = []
     
     for md_file in md_files:
+        # Skip project reports
+        if "project_time_report" in md_file.name.lower():
+            continue
         if "kimai" in md_file.name.lower():
             ordered_files.insert(0, md_file)  # Timesheet first
         elif "email" in md_file.name.lower():
             ordered_files.append(md_file)  # Email second
-        else:
-            other_files.append(md_file)
-    
-    ordered_files.extend(other_files)  # Other reports last
     
     if not ordered_files:
         print(f"⚠️  No reports to combine")
