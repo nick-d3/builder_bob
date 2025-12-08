@@ -227,16 +227,162 @@ def generate_project_report(date_str):
         safe_filename = ''.join(c for c in safe_filename if c.isalnum() or c in ('-', '_'))
         project_file = project_reports_dir / f"{safe_filename}.md"
         
+        # Collect all machine hours and descriptions for summary
+        all_machine_hours_summary = defaultdict(float)  # machine -> total hours
+        all_descriptions = []  # Collect all descriptions
+        
+        for entry in entries:
+            description = entry.get('description') or ''
+            description = description.strip() if description else ''
+            if description:
+                all_descriptions.append(description)
+                
+                # Extract machine hours from various formats
+                # Format 1: "2hrs backhoe", "3 hours excavator"
+                hour_matches = re.finditer(r'(\d+(?:\.\d+)?)\s*(?:hrs?|hours?)\s+([a-zA-Z\s]+?)(?:,|\.|\s|$)', description, re.IGNORECASE)
+                for match in hour_matches:
+                    hours = float(match.group(1))
+                    machine_name = match.group(2).strip()
+                    if machine_name and len(machine_name) > 2:  # Filter out very short matches
+                        all_machine_hours_summary[machine_name] += hours
+                
+                # Format 2: "total of two hours used", "total of threehours"
+                total_matches = re.finditer(r'total\s+of\s+(\d+(?:\s+\d+)?)\s*(?:hours?|hrs?)\s+(?:used|of\s+use)', description, re.IGNORECASE)
+                for match in total_matches:
+                    hours_str = match.group(1).replace(' ', '')
+                    try:
+                        hours = float(hours_str)
+                        # Try to find machine name before "total"
+                        before_total = description[:match.start()].strip()
+                        # Look for machine names like "JD loader", "Mini 50", etc.
+                        machine_match = re.search(r'([A-Z][A-Z0-9\s]+(?:loader|excavator|dozer|backhoe|mini|truck|compactor|paver|milling|grader|roller))', before_total, re.IGNORECASE)
+                        if machine_match:
+                            machine_name = machine_match.group(1).strip()
+                            all_machine_hours_summary[machine_name] += hours
+                    except ValueError:
+                        pass
+                
+                # Format 3: Meter readings "starting hours X ending hours Y total of Z hours"
+                # Also handle "threehours", "two hours" etc.
+                meter_matches = re.finditer(r'(\d+)\s+starting\s+hours?\s+ending\s+hours?\s+(\d+)\s+total\s+of\s+(\d+(?:\s+\d+)?|two|three|four|five|six|seven|eight|nine|ten)\s*(?:hours?|hrs?)', description, re.IGNORECASE)
+                word_to_num = {'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10}
+                
+                for match in meter_matches:
+                    try:
+                        hours_str = match.group(3).strip().lower()
+                        if hours_str in word_to_num:
+                            hours = float(word_to_num[hours_str])
+                        else:
+                            hours = float(hours_str.replace(' ', ''))
+                        
+                        # Find machine name before the meter reading
+                        before_meter = description[:match.start()].strip()
+                        # Look for patterns like "JD loader", "Mini 50", etc.
+                        machine_match = re.search(r'([A-Z][A-Z0-9\s-]+(?:loader|excavator|dozer|backhoe|mini|truck|compactor|paver|milling|grader|roller|50))', before_meter, re.IGNORECASE)
+                        if machine_match:
+                            machine_name = machine_match.group(1).strip()
+                            # Clean up machine name
+                            machine_name = re.sub(r'\s+', ' ', machine_name).strip()
+                            all_machine_hours_summary[machine_name] += hours
+                    except (ValueError, KeyError):
+                        pass
+                
+                # Format 3b: "Mini 50-6287 starting hours ending hours 6293 total of threehours"
+                mini_matches = re.finditer(r'(Mini\s+\d+[-\s]\d+)\s+starting\s+hours?\s+ending\s+hours?\s+\d+\s+total\s+of\s+(\d+(?:\s+\d+)?|two|three|four|five|six|seven|eight|nine|ten)\s*(?:hours?|hrs?)', description, re.IGNORECASE)
+                for match in mini_matches:
+                    try:
+                        machine_name = match.group(1).strip()
+                        hours_str = match.group(2).strip().lower()
+                        if hours_str in word_to_num:
+                            hours = float(word_to_num[hours_str])
+                        else:
+                            hours = float(hours_str.replace(' ', ''))
+                        all_machine_hours_summary[machine_name] += hours
+                    except (ValueError, KeyError):
+                        pass
+                
+                # Format 3c: Handle "total of threehours" as one word (standalone)
+                combined_word_matches = re.finditer(r'([A-Z][A-Z0-9\s-]+(?:loader|excavator|dozer|backhoe|mini|truck|compactor|paver|milling|grader|roller|50))[-\s]\d+\s+starting\s+hours?\s+ending\s+hours?\s+\d+\s+total\s+of\s+(twohours|threehours|fourhours|fivehours|sixhours|sevenhours|eighthours|ninehours|tenhours)', description, re.IGNORECASE)
+                for match in combined_word_matches:
+                    try:
+                        machine_name = match.group(1).strip()
+                        hours_word = match.group(2).lower()
+                        hours = float(word_to_num.get(hours_word.replace('hours', '').replace('hour', ''), 0))
+                        if hours > 0:
+                            machine_name = re.sub(r'\s+', ' ', machine_name).strip()
+                            all_machine_hours_summary[machine_name] += hours
+                    except (ValueError, KeyError):
+                        pass
+                
+                # Format 3d: "Mini 50-6287...total of threehours" - extract Mini 50
+                mini_combined = re.finditer(r'(Mini\s+\d+)[-\s]\d+\s+starting\s+hours?\s+ending\s+hours?\s+\d+\s+total\s+of\s+(twohours|threehours|fourhours|fivehours|sixhours|sevenhours|eighthours|ninehours|tenhours)', description, re.IGNORECASE)
+                for match in mini_combined:
+                    try:
+                        machine_name = match.group(1).strip()
+                        hours_word = match.group(2).lower()
+                        hours = float(word_to_num.get(hours_word.replace('hours', '').replace('hour', ''), 0))
+                        if hours > 0:
+                            all_machine_hours_summary[machine_name] += hours
+                    except (ValueError, KeyError):
+                        pass
+                
+                # Format 4: "I used JD loader for 2 hours"
+                used_matches = re.finditer(r'used\s+([a-zA-Z\s]+?)\s+for\s+(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)', description, re.IGNORECASE)
+                for match in used_matches:
+                    machine_name = match.group(1).strip()
+                    hours = float(match.group(2))
+                    if machine_name and len(machine_name) > 2:
+                        all_machine_hours_summary[machine_name] += hours
+        
         # Start individual project report
         project_report = f"""# {project_display} - {date_str}
 
 **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  
 **Date:** {date_str}  
-**Total Hours:** {total_hours:.2f}h  
+**Total Hours Worked:** {total_hours:.2f}h  
 **Total Entries:** {len(entries)}
 
 ---
 """
+        
+        # Clean up and combine similar machine names
+        cleaned_machine_hours = defaultdict(float)
+        for machine, hours in all_machine_hours_summary.items():
+            # Normalize machine names - remove extra words, combine similar names
+            machine_clean = machine.strip()
+            # Remove common prefixes/suffixes that aren't part of the machine name
+            machine_clean = re.sub(r'^(I used|Used|used|for|the|a|an)\s+', '', machine_clean, flags=re.IGNORECASE)
+            machine_clean = re.sub(r'\s+(for|used|to|dig|out|material).*$', '', machine_clean, flags=re.IGNORECASE)
+            
+            # Combine "Mini 50" and "Mini 50-6287" into "Mini 50"
+            if 'Mini 50' in machine_clean:
+                machine_clean = 'Mini 50'
+            # Combine "JD loader" variations
+            if 'JD loader' in machine_clean or 'JD' in machine_clean and 'loader' in machine_clean:
+                machine_clean = 'JD loader'
+            
+            # Only add if it's a reasonable machine name (not too long, contains machine keywords)
+            if len(machine_clean) < 100 and any(keyword in machine_clean.lower() for keyword in 
+                ['loader', 'excavator', 'dozer', 'backhoe', 'mini', 'truck', 'compactor', 'paver', 'milling', 'grader', 'roller', 'jd']):
+                cleaned_machine_hours[machine_clean] += hours
+        
+        # Add machine hours summary table if we have machine hours
+        if cleaned_machine_hours:
+            project_report += "### Machine Hours Summary\n\n"
+            project_report += "| Machine | Total Hours |\n"
+            project_report += "|---------|-------------|\n"
+            for machine, hours in sorted(cleaned_machine_hours.items(), key=lambda x: x[1], reverse=True):
+                project_report += f"| {machine} | {hours:.2f}h |\n"
+            project_report += "\n"
+        
+        # Add job details/descriptions section
+        if all_descriptions:
+            project_report += "### Job Details & Work Completed\n\n"
+            for desc in all_descriptions:
+                project_report += f"{desc}\n\n"
+            project_report += "\n"
+        
+        project_report += "---\n\n"
         
         # Group by employee
         by_employee = defaultdict(list)
