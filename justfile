@@ -19,6 +19,10 @@ default:
     @echo "📧 Email Analysis:"
     @echo "  just email-analysis    - Email analysis (manual workflow)"
     @echo ""
+    @echo "📋 Project Reports:"
+    @echo "  just run               - Generate project reports (yesterday) + PDFs"
+    @echo "  just run-date <DATE>   - Project reports for specific date (YYYY-MM-DD)"
+    @echo ""
     @echo "🛠️  Utilities:"
     @echo "  just status            - Check today's status"
     @echo "  just docs              - Show all source code"
@@ -125,6 +129,32 @@ email-analysis:
     @echo "  3. Analyze and prioritize"
     @echo "  4. Generate markdown report"
     @echo "  5. Save to reports/YYYY-MM-DD/email_report.md"
+
+# Generate project reports workflow
+# Creates markdown files for each job worked, then converts to PDFs and combines
+run:
+    @echo "📋 Generating project reports for yesterday..."
+    @echo ""
+    @echo "1️⃣  Creating project markdown reports..."
+    @python3 tools/reporting/project_time_report.py
+    @echo ""
+    @echo "2️⃣  Converting to PDFs and combining..."
+    @python3 tools/reporting/combine_project_reports_pdf.py
+    @echo ""
+    @echo "✅ Project reports complete!"
+
+# Generate project reports for a specific date
+# Usage: just run-date 2025-12-09
+run-date DATE:
+    @echo "📋 Generating project reports for {{DATE}}..."
+    @echo ""
+    @echo "1️⃣  Creating project markdown reports..."
+    @python3 tools/reporting/project_time_report.py {{DATE}}
+    @echo ""
+    @echo "2️⃣  Converting to PDFs and combining..."
+    @python3 tools/reporting/combine_project_reports_pdf.py {{DATE}}
+    @echo ""
+    @echo "✅ Project reports complete!"
 
 # Combine all reports in a date directory into a single PDF
 # Usage: just pdf-report [DATE] (defaults to today)
